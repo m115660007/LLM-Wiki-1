@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐱 貓咖新手互動教學 — Graph 版</title>
+<style>
+/* ═══════════════════════════════════════════
+   ROOT VARIABLES
+════════════════════════════════════════════ */
+:root {
+  --hub:   #C88A58;
+  --clA:   #3A8A7B;
+  --clB:   #9B59B6;
+  --clC:   #E06D53;
+  --clD:   #E29538;
+  --bg:    #1a1a2e;
+  --card:  #16213e;
+  --text:  #e8e8f0;
+  --muted: #8888aa;
+  --edge:  rgba(200,200,255,0.25);
+  --edge-hover: rgba(200,200,255,0.7);
+  --radius: 14px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
+
+/* ═══════════════════════════════════════════
+   TOP BAR
+════════════════════════════════════════════ */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 48px; display: flex; align-items: center; padding: 0 16px; gap: 12px;
+  background: rgba(16,10,30,0.92); backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+#topbar .logo { font-size: 1.1rem; font-weight: 700; color: var(--hub); flex: 1; }
+.btn-toggle {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px; border: none; cursor: pointer;
+  font-size: 0.82rem; font-weight: 600; transition: all .2s;
+}
+#btn-graph { background: var(--hub); color: #fff; }
+#btn-graph:hover { filter: brightness(1.15); }
+#btn-graph.active { background: #fff; color: var(--hub); }
+#slide-counter { font-size: 0.8rem; color: var(--muted); min-width: 60px; text-align: right; }
+#shortcuts-hint { font-size: 0.72rem; color: var(--muted); display: flex; gap: 8px; }
+#shortcuts-hint kbd {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px; padding: 1px 5px; font-size: 0.7rem;
+}
+
+/* ═══════════════════════════════════════════
+   PROGRESS BAR
+════════════════════════════════════════════ */
+#progress-bar {
+  position: fixed; top: 48px; left: 0; height: 3px; z-index: 99;
+  background: linear-gradient(90deg, var(--hub), var(--clC));
+  transition: width .3s ease; width: 0%;
+}
+
+/* ═══════════════════════════════════════════
+   VIEWS
+════════════════════════════════════════════ */
+#graph-view, #slide-view {
+  position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
+  transition: opacity .3s ease, visibility .3s ease;
+}
+#graph-view { background: radial-gradient(ellipse at 50% 42%, #252b4a 0%, #171a30 55%, #101326 100%); overflow: hidden; }
+#slide-view { overflow: hidden; display: flex; align-items: center; justify-content: center; }
+
+.view-hidden { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+
+/* ═══════════════════════════════════════════
+   GRAPH CANVAS
+════════════════════════════════════════════ */
+#graph-canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#graph-canvas:focus-visible { outline: 2px solid var(--hub); outline-offset: -4px; }
+
+/* Graph HUD: controls and instructions stay out of the canvas drawing surface. */
+#graph-hud {
+  position: absolute; z-index: 5; top: 22px; left: 24px; right: 24px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 16px; pointer-events: none;
+}
+.graph-heading { max-width: 450px; }
+.graph-eyebrow { font-size: 0.7rem; color: #e6b98f; letter-spacing: .18em; font-weight: 700; }
+.graph-heading h2 { font-size: clamp(1.1rem, 2.5vw, 1.7rem); letter-spacing: .02em; margin: 5px 0; }
+.graph-heading p { color: #b3b8d3; line-height: 1.55; font-size: .77rem; }
+.graph-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; pointer-events: auto; }
+.graph-control {
+  color: #f2efff; border: 1px solid rgba(226,227,255,.22);
+  background: rgba(15,19,42,.78); padding: 9px 12px;
+  border-radius: 10px; cursor: pointer; font-size: .78rem; font-weight: 700;
+  backdrop-filter: blur(8px); transition: background .2s, transform .2s;
+}
+.graph-control:hover, .graph-control:focus-visible { background: #374063; transform: translateY(-1px); }
+.graph-control:focus-visible { outline: 2px solid #e8c69e; outline-offset: 2px; }
+#graph-help {
+  position: absolute; right: 20px; bottom: 22px; pointer-events: none;
+  color: #bdc3de; font-size: .73rem; line-height: 1.65;
+  background: rgba(15,19,42,.78); padding: 10px 14px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.09);
+}
+.graph-emergency { color: #ff9b9b; font-weight: 700; }
+
+/* Graph Legend */
+#graph-legend {
+  position: absolute; bottom: 20px; left: 20px;
+  background: rgba(16,10,30,0.88); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 10px 14px; font-size: 0.75rem;
+}
+#graph-legend, #graph-help { z-index: 4; }
+#graph-legend h4 { color: var(--muted); margin-bottom: 6px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+/* Graph Tooltip */
+#graph-tooltip {
+  position: absolute; pointer-events: none;
+  background: rgba(16,10,30,0.95); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px; padding: 8px 12px; font-size: 0.8rem;
+  display: none; z-index: 50; max-width: 200px;
+}
+#graph-tooltip .tt-id { color: var(--muted); font-size: 0.65rem; margin-bottom: 2px; }
+#graph-tooltip .tt-label { font-weight: 600; }
+#graph-tooltip .tt-hint { color: var(--muted); font-size: 0.7rem; margin-top: 4px; }
+
+/* ═══════════════════════════════════════════
+   SLIDE VIEW
+════════════════════════════════════════════ */
+.slide-wrapper {
+  width: min(820px, 96vw); position: relative;
+}
+
+.slide {
+  display: none; animation: slideIn .35s ease;
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden;
+  min-height: 480px;
+}
+.slide.active { display: block; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Slide header band */
+.slide-header {
+  padding: 24px 28px 18px;
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.slide-cluster-badge {
+  flex-shrink: 0; padding: 3px 10px; border-radius: 20px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: .05em;
+  color: #fff; margin-top: 4px;
+}
+.slide-title-block { flex: 1; }
+.slide-node-id { font-size: 0.65rem; color: var(--muted); margin-bottom: 4px; letter-spacing: .08em; }
+.slide-title { font-size: 1.5rem; font-weight: 800; line-height: 1.25; }
+.slide-subtitle { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+.slide-img { width: 100px; height: 100px; object-fit: contain; flex-shrink: 0; border-radius: 8px; opacity: .9; }
+.slide-illustration {
+  width: 100px; height: 100px; flex-shrink: 0; border-radius: 12px;
+  display: grid; place-items: center; font-size: 3.1rem;
+  background: radial-gradient(circle at 30% 24%, rgba(255,238,197,.22), rgba(184,123,103,.12) 64%, rgba(94,66,100,.15));
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+/* Slide body */
+.slide-body { padding: 0 28px 10px; }
+.slide-body ul { list-style: none; padding: 0; }
+.slide-body ul li {
+  padding: 7px 0 7px 24px; position: relative;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.9rem; line-height: 1.5;
+}
+.slide-body ul li::before { content: '▸'; position: absolute; left: 4px; color: var(--hub); }
+.slide-body .callout {
+  margin: 10px 0; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;
+  border-left: 3px solid;
+}
+.callout.tip    { background: rgba(58,138,123,.15); border-color: var(--clA); }
+.callout.warn   { background: rgba(226,109,83,.15);  border-color: var(--clC); }
+.callout.note   { background: rgba(155,89,182,.15);  border-color: var(--clB); }
+.callout.danger { background: rgba(220,50,50,.15);   border-color: #e53535; }
+.callout strong { display: block; margin-bottom: 4px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; }
+
+/* Explore links at bottom */
+.slide-explore {
+  padding: 12px 28px 20px; border-top: 1px solid rgba(255,255,255,0.07);
+  margin-top: 10px;
+}
+.slide-explore .explore-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 8px; letter-spacing: .06em; text-transform: uppercase; }
+.explore-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.explore-btn {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05); color: var(--text);
+  font-size: 0.78rem; cursor: pointer; transition: all .2s;
+}
+.explore-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); transform: translateY(-1px); }
+
+/* Slide nav arrows */
+#slide-nav {
+  display: flex; align-items: center; justify-content: center; gap: 20px;
+  margin-top: 14px;
+}
+.nav-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.05); color: var(--text); font-size: 1.1rem;
+  cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.15); transform: scale(1.08); }
+.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+#nav-overview-btn {
+  padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.05); color: var(--text); font-size: 0.8rem; cursor: pointer;
+  transition: all .2s;
+}
+#nav-overview-btn:hover { background: rgba(255,255,255,0.12); }
+
+/* ═══════════════════════════════════════════
+   OVERVIEW MODAL
+════════════════════════════════════════════ */
+#overview-modal {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(10,8,20,0.92); backdrop-filter: blur(8px);
+  display: none; padding: 70px 20px 20px;
+  overflow-y: auto;
+}
+#overview-modal.open { display: block; }
+#overview-modal h2 { text-align: center; margin-bottom: 20px; font-size: 1.1rem; color: var(--muted); }
+.overview-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px; max-width: 900px; margin: 0 auto;
+}
+.overview-card {
+  background: var(--card); border-radius: 10px; padding: 12px;
+  cursor: pointer; transition: all .2s; border: 2px solid transparent;
+}
+.overview-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+.overview-card .ov-id { font-size: 0.6rem; color: var(--muted); }
+.overview-card .ov-title { font-size: 0.82rem; font-weight: 700; margin-top: 4px; }
+.close-overview {
+  position: fixed; top: 60px; right: 20px;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  color: var(--text); border-radius: 50%; width: 36px; height: 36px;
+  font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+@media (max-width: 720px) {
+  #shortcuts-hint { display: none; }
+  #topbar { gap: 8px; padding: 0 10px; }
+  #topbar .logo { font-size: .9rem; }
+  .btn-toggle { padding: 7px 10px; font-size: .73rem; }
+  #graph-hud { top: 14px; left: 13px; right: 13px; gap: 8px; }
+  .graph-heading p { max-width: 240px; font-size: .68rem; }
+  .graph-controls { max-width: 145px; gap: 5px; }
+  .graph-control { padding: 7px 9px; font-size: .7rem; }
+  #graph-legend { left: 10px; bottom: 12px; padding: 8px 10px; font-size: .67rem; }
+  #graph-help { right: 10px; bottom: 12px; max-width: 170px; font-size: .64rem; }
+  #slide-view { overflow-y: auto; align-items: flex-start; padding: 15px 0 25px; }
+  .slide { min-height: auto; }
+  .slide-header { padding: 20px 18px 12px; }
+  .slide-body { padding: 0 18px 10px; }
+  .slide-explore { padding: 12px 18px 18px; }
+  .slide-img, .slide-illustration { width: 56px; height: 56px; }
+  .slide-illustration { font-size: 2rem; }
+  .slide-title { font-size: 1.15rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ TOP BAR ═══════ -->
+<div id="topbar">
+  <div class="logo">🐱 貓咖新手教學</div>
+  <div id="shortcuts-hint">
+    <span><kbd>G</kbd> Graph</span>
+    <span><kbd>←</kbd><kbd>→</kbd> 換頁</span>
+    <span><kbd>O</kbd> 總覽</span>
+    <span><kbd>F</kbd> 全螢幕</span>
+  </div>
+  <div id="slide-counter">1 / 16</div>
+  <button class="btn-toggle" id="btn-graph" onclick="toggleGraphView()" title="G 鍵切換">
+    🌐 Graph 圖譜
+  </button>
+</div>
+
+<div id="progress-bar"></div>
+
+<!-- ═══════ GRAPH VIEW ═══════ -->
+<div id="graph-view" aria-label="互動式教學節點星系圖">
+  <canvas id="graph-canvas" tabindex="0" aria-label="拖曳節點、點選跳轉投影片；滾輪縮放、拖曳空白處平移"></canvas>
+  <div id="graph-hud">
+    <div class="graph-heading">
+      <div class="graph-eyebrow">INTERACTIVE KNOWLEDGE ATLAS</div>
+      <h2>🐱 貓咖知識星系</h2>
+      <p>16 個教學節點 · 4 大主題星群<br>從任何知識點出發，自由探索相連的觀念。</p>
+    </div>
+    <div class="graph-controls" aria-label="圖譜操作">
+      <button class="graph-control" type="button" onclick="zoomGraph(1.25)" title="放大圖譜">＋ 放大</button>
+      <button class="graph-control" type="button" onclick="zoomGraph(0.8)" title="縮小圖譜">－ 縮小</button>
+      <button class="graph-control" type="button" onclick="resetGraphView()" title="讓所有節點回到畫面中央">◎ 重置</button>
+    </div>
+  </div>
+  <div id="graph-tooltip">
+    <div class="tt-id" id="tt-id"></div>
+    <div class="tt-label" id="tt-label"></div>
+    <div class="tt-hint">點擊 → 開啟投影片</div>
+  </div>
+  <div id="graph-legend">
+    <h4>節點群組</h4>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--hub)"></div> 核心主軸</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--clA)"></div> A 環境法規</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--clB)"></div> B 貓語感知</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--clC)"></div> C 互動方式</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--clD)"></div> D 情境應對</div>
+    <div class="legend-item graph-emergency">┄┄ 紅線：緊急應對捷徑</div>
+  </div>
+  <div id="graph-help">🖱️ 點節點：開啟投影片<br>✋ 拖節點：調整位置｜拖空白：平移<br>🔎 滾輪／＋－：縮放｜<kbd>G</kbd>：切換模式</div>
+</div>
+
+<!-- ═══════ SLIDE VIEW ═══════ -->
+<div id="slide-view">
+  <div class="slide-wrapper">
+    <div id="slides-container">
+
+      <!-- HUB-00 -->
+      <div class="slide active" data-id="HUB-00">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(200,138,88,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">HUB-00 · 核心主軸</div>
+            <div class="slide-title">尊重貓咪自主權</div>
+            <div class="slide-subtitle">所有互動的根本原則</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--hub)">HUB</span>
+          <img class="slide-img" src="../assets/image0.png" alt="貓咪" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>🐱 貓咖≠遊樂場——每隻貓有<strong>拒絕互動的自由</strong></li>
+            <li>⭐ 由貓主動靠近才啟動互動，不追、不抓、不強迫</li>
+            <li>📋 入場前了解店規 &amp; 衛生程序，才是合格訪客</li>
+            <li>👁️ 學會讀懂貓的肢體語言，是安全互動的基礎</li>
+            <li>🔗 本圖譜 15 個節點，涵蓋法規 → 貓語 → 互動 → 情境全程</li>
+          </ul>
+          <div class="callout tip"><strong>💡 新手黃金心態</strong>安靜坐下等貓來，比主動追貓效果好 10 倍。讓貓決定距離，你只負責提供友好信號。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('A1')">⚖️ A1 法律合規</button>
+            <button class="explore-btn" onclick="goToSlide('A2')">🏠 A2 環境五柱</button>
+            <button class="explore-btn" onclick="goToSlide('B1')">🚨 B1 警戒預警</button>
+            <button class="explore-btn" onclick="goToSlide('C1')">🤝 C1 破冰四步</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- A1 -->
+      <div class="slide" data-id="A1">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(58,138,123,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">A1 · 環境法規群組</div>
+            <div class="slide-title">法律合規與動物展演</div>
+            <div class="slide-subtitle">農業部 2024 年修訂《動物展演管理辦法》</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clA)">A</span>
+          <img class="slide-img" src="../assets/image7.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>📜 貓咖依法屬「<strong>動物展演</strong>」，需向地方主管機關申請許可</li>
+            <li>🏥 店貓必須有完整疫苗接種紀錄（狂犬病、三合一等）</li>
+            <li>⏰ 展演時間上限規定：連續展演不超過特定時數，需有休息期</li>
+            <li>🧑‍⚕️ 店家須與合格獸醫師簽約，異常時可立即就醫</li>
+            <li>📸 商業拍攝須另行申請，一般訪客拍照不得使用閃光燈</li>
+            <li>🚫 違規展演：最高可處 15 萬元罰鍰，並吊銷許可</li>
+          </ul>
+          <div class="callout note"><strong>📌 訪客義務</strong>遵守展演規定不只是店家的事——訪客不服從勸導也可能導致店家被記點，請配合工作人員指示。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('A2')">🏠 A2 環境五柱</button>
+            <button class="explore-btn" onclick="goToSlide('C1')">🤝 C1 破冰四步</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 抓傷急救</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- A2 -->
+      <div class="slide" data-id="A2">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(58,138,123,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">A2 · 環境法規群組</div>
+            <div class="slide-title">環境五大支柱</div>
+            <div class="slide-subtitle">iCatCare《Your Cat's Environmental Needs》</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clA)">A</span>
+          <img class="slide-img" src="../assets/image3.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>🏔️ <strong>垂直空間</strong>：貓跳台、高架層板讓貓有安全俯視點</li>
+            <li>🪨 <strong>躲避空間</strong>：隱蔽角落、隧道、紙箱——壓力釋放必備</li>
+            <li>🍽️ <strong>感官刺激</strong>：玩具輪替、貓草、窗台景觀豐富認知</li>
+            <li>🕒 <strong>可預測日程</strong>：固定餵食時間減少焦慮行為</li>
+            <li>🔒 <strong>正向掌控感</strong>：貓能選擇接近或迴避，不被強迫</li>
+          </ul>
+          <div class="callout tip"><strong>🌿 訪客能做的事</strong>到達後先靜坐 5 分鐘，讓貓感知你的氣味與存在。不要主動打擾正在使用躲避空間的貓。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('A3')">🧴 A3 入店衛生</button>
+            <button class="explore-btn" onclick="goToSlide('B3')">🌸 B3 費洛蒙</button>
+            <button class="explore-btn" onclick="goToSlide('C3')">🎭 C3 逗貓玩耍</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- A3 -->
+      <div class="slide" data-id="A3">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(58,138,123,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">A3 · 環境法規群組</div>
+            <div class="slide-title">入店衛生與鞋套協議</div>
+            <div class="slide-subtitle">農業部貓咖衛生規範</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clA)">A</span>
+          <img class="slide-img" src="../assets/image7.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>👟 入場必須<strong>換穿店提供的鞋套或室內拖鞋</strong>，防止外部病原帶入</li>
+            <li>🤲 以店內洗手台<strong>洗手或使用酒精乾洗手</strong>後才可觸碰貓咪</li>
+            <li>🤧 感冒、發燒或皮膚病發作期間，請自主迴避前往</li>
+            <li>💊 個人藥品、食物、飲料須放置隔離區，不可帶入貓區</li>
+            <li>🧴 香水、防蟲噴劑可能使貓咪不適，建議入場前少噴</li>
+            <li>📱 手機消毒：店家提供擦拭布，拍照前請先清潔螢幕</li>
+          </ul>
+          <div class="callout warn"><strong>⚠️ 注意</strong>若曾接觸其他動物（如寵物犬），請特別告知工作人員並加強洗手程序。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('B3')">🌸 B3 費洛蒙</button>
+            <button class="explore-btn" onclick="goToSlide('D1')">🍽️ D1 桌面防護</button>
+            <button class="explore-btn" onclick="goToSlide('D2')">👨‍👩‍👧 D2 兒童同行</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- B1 -->
+      <div class="slide" data-id="B1">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(155,89,182,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">B1 · 貓語感知群組</div>
+            <div class="slide-title">警戒預警三級量表</div>
+            <div class="slide-subtitle">讀懂貓咪的壓力信號，保護自己也保護貓</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clB)">B</span>
+          <img class="slide-img" src="../assets/image2.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>🟢 <strong>Level 1 警告（請暫停）</strong>：慢眨眼→快眨眼、尾巴緩搖、耳朵側轉</li>
+            <li>🟡 <strong>Level 2 要求（立即停手）</strong>：飛機耳（耳朵扁平後壓）、瞳孔放大、低鳴聲</li>
+            <li>🔴 <strong>Level 3 攻擊前兆（立刻後退）</strong>：炸毛弓背、嘶吼露齒、尾巴膨脹抽打</li>
+            <li>🐾 <strong>翻肚≠邀請</strong>：肚子朝天是放鬆展示，不是邀請你摸肚子</li>
+            <li>⏱️ 信號讀取黃金3秒：看到 Level 1 就停，不要等到 Level 3</li>
+          </ul>
+          <div class="callout danger"><strong>🔴 危險！</strong>出現嘶吼或炸毛時，請<strong>緩慢後退</strong>，不要突然快速移動，更不要試圖安撫——那只會讓貓更緊張。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('B2')">😸 B2 呼嚕含意</button>
+            <button class="explore-btn" onclick="goToSlide('C2')">🗺️ C2 撫摸地圖</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 抓傷急救</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- B2 -->
+      <div class="slide" data-id="B2">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(155,89,182,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">B2 · 貓語感知群組</div>
+            <div class="slide-title">呼嚕的雙重含意</div>
+            <div class="slide-subtitle">呼嚕≠開心，學會分辨才安全</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clB)">B</span>
+          <img class="slide-img" src="../assets/image3.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>😊 <strong>滿足呼嚕</strong>：身體放鬆、慢眨眼、自願靠近 → 繼續互動</li>
+            <li>😰 <strong>安撫呼嚕</strong>：肌肉緊繃、耳朵側轉、藏爪 → 請暫停並觀察</li>
+            <li>🔊 <strong>音調差異</strong>：滿足呼嚕音調均勻；應激呼嚕音調不規則、混合嗚咽</li>
+            <li>🌡️ <strong>自我療癒功能</strong>：25-50Hz振動頻率有助骨骼修復，受傷貓也會呼嚕</li>
+            <li>🎯 搭配身體姿態判斷：單看呼嚕聲容易誤判</li>
+          </ul>
+          <div class="callout note"><strong>📖 研究補充</strong>「索食呼嚕」：貓餓了時會在正常呼嚕中混入高頻哭腔，觸發人類育嬰本能，促使主人餵食。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('C2')">🗺️ C2 撫摸地圖</button>
+            <button class="explore-btn" onclick="goToSlide('D3')">🐾 D3 特殊品種</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- B3 -->
+      <div class="slide" data-id="B3">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(155,89,182,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">B3 · 貓語感知群組</div>
+            <div class="slide-title">氣味與費洛蒙</div>
+            <div class="slide-subtitle">嗅覺是貓的第一語言</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clB)">B</span>
+          <img class="slide-img" src="../assets/image0.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>👃 貓的嗅覺細胞是人類的<strong>14 倍</strong>，整個空間都是氣味地圖</li>
+            <li>😺 <strong>臉頰蹭你</strong>：釋放 F3 友好費洛蒙 = 認可你的存在</li>
+            <li>🐾 <strong>踩腳標記</strong>：掌心費洛蒙劃定領域，不是傷害行為</li>
+            <li>🌿 <strong>貓薄荷反應</strong>：約 50-70% 的貓有反應，幼貓無感（6個月後啟動）</li>
+            <li>🧪 <strong>Feliway 合成費洛蒙</strong>：許多優良貓咖會使用，幫助新貓適應環境</li>
+            <li>🚫 香水、菸草氣味：對貓強烈刺激，可能導致迴避行為</li>
+          </ul>
+          <div class="callout tip"><strong>💡 氣味破冰法</strong>將手背（非手指）輕輕伸向貓鼻子下方 10cm，讓牠主動嗅聞。若牠蹭你，代表通過氣味審核 ✓</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('C1')">🤝 C1 破冰四步</button>
+            <button class="explore-btn" onclick="goToSlide('D1')">🍽️ D1 桌面防護</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- C1 -->
+      <div class="slide" data-id="C1">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(224,109,83,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">C1 · 互動方式群組</div>
+            <div class="slide-title">破冰四步驟（同意優先）</div>
+            <div class="slide-subtitle">Consent-First Approach — 讓貓做主</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clC)">C</span>
+          <img class="slide-img" src="../assets/image0.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>①  <strong>靜止等待</strong>：坐下、放低姿態、眼神不直視（側看）</li>
+            <li>②  <strong>氣味邀請</strong>：手背輕伸至貓鼻前 10cm，等待主動嗅聞</li>
+            <li>③  <strong>短暫觸碰</strong>：若牠靠近，輕觸下巴或頸背 2-3 秒後收手</li>
+            <li>④  <strong>觀察回應</strong>：若貓貼近要更多 → 繼續；若轉頭走開 → 結束</li>
+            <li>🔁 <strong>重複確認</strong>：每次撫摸 5 秒後暫停，確認貓還想繼續</li>
+          </ul>
+          <div class="callout tip"><strong>💡 為什麼這樣設計？</strong>貓無法說「不」，只能用肢體行為表達。這 4 步讓貓在每個階段都有退出的機會，建立真正的信任。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('C2')">🗺️ C2 撫摸地圖</button>
+            <button class="explore-btn" onclick="goToSlide('C3')">🎭 C3 逗貓玩耍</button>
+            <button class="explore-btn" onclick="goToSlide('B1')">🚨 B1 警戒預警</button>
+            <button class="explore-btn" onclick="goToSlide('C5')">📷 C5 攝影禮節</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- C2 -->
+      <div class="slide" data-id="C2">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(224,109,83,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">C2 · 互動方式群組</div>
+            <div class="slide-title">撫摸地圖（安全 vs 禁區）</div>
+            <div class="slide-subtitle">知道哪裡可摸、哪裡是地雷</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clC)">C</span>
+          <img class="slide-img" src="../assets/image.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>✅ <strong>綠燈區（大多數貓歡迎）</strong>：下巴、頰腺（臉頰後方）、頭頂、頸背</li>
+            <li>⚠️ <strong>黃燈區（需觀察反應）</strong>：背部沿脊椎、尾根部（部分貓喜歡）</li>
+            <li>🚫 <strong>紅燈禁區（幾乎所有貓拒絕）</strong>：肚子、腳掌/肉球、尾巴、鬍鬚</li>
+            <li>🐾 <strong>翻肚警示</strong>：露肚是信任展示，不是邀請；強行觸碰會立刻啟動防禦</li>
+            <li>⏱️ 每 5 秒暫停一次，讓貓決定是否繼續</li>
+          </ul>
+          <div class="callout warn"><strong>⚠️ 肉球地雷</strong>貓的肉球有豐富神經末梢，非常敏感。強行撫摸肉球是導致被抓的頭號原因。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('B2')">😸 B2 呼嚕含意</button>
+            <button class="explore-btn" onclick="goToSlide('D3')">🐾 D3 特殊品種</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 緊急處置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- C3 -->
+      <div class="slide" data-id="C3">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(224,109,83,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">C3 · 互動方式群組</div>
+            <div class="slide-title">逗貓玩耍規則</div>
+            <div class="slide-subtitle">安全、有效、讓貓盡興的玩法</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clC)">C</span>
+          <img class="slide-img" src="../assets/image6.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>🎣 <strong>逗貓棒優先</strong>：手指≠玩具，永遠用工具代替肢體</li>
+            <li>🐭 <strong>模擬獵物動作</strong>：不規則跳動、短停頓、躲到障礙物後再出現</li>
+            <li>🏆 <strong>讓貓贏</strong>：每隔幾次要讓貓成功「獵到」，建立成就感</li>
+            <li>⏰ <strong>遊戲時間</strong>：10-15 分鐘段落，配合貓的精力峰值（晨昏）</li>
+            <li>🚫 <strong>禁止</strong>：用手指逗弄（=訓練攻擊行為）、在貓睡眠時強迫玩耍</li>
+            <li>📋 使用店家提供的玩具，不帶外部玩具進場（防止病原）</li>
+          </ul>
+          <div class="callout tip"><strong>💡 冷卻儀式</strong>遊戲結束前放慢動作，讓貓緩緩追上後「獵獲」，再靜止。避免突然停止讓貓感到挫折。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('C4')">🍡 C4 肉泥餵食</button>
+            <button class="explore-btn" onclick="goToSlide('D3')">🐾 D3 特殊品種</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 緊急處置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- C4 -->
+      <div class="slide" data-id="C4">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(224,109,83,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">C4 · 互動方式群組</div>
+            <div class="slide-title">肉泥安全餵食</div>
+            <div class="slide-subtitle">啾嚕餵食的正確姿勢</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clC)">C</span>
+          <img class="slide-img" src="../assets/image5.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>📋 <strong>只餵店家認可的零食</strong>，自帶食物嚴禁餵食（過敏、腎病風險）</li>
+            <li>🤌 <strong>正確持握</strong>：拇指捏住尾端，將吸管口朝貓，不要全部擠出</li>
+            <li>⏳ <strong>讓貓自己舔</strong>：別把管口塞進嘴巴，讓牠自主控制進食速度</li>
+            <li>🧃 <strong>剩餘量</strong>：每份肉泥約 14g，餵食量請依店家指示，勿過量</li>
+            <li>🧼 <strong>事後清潔</strong>：手上的肉泥味道可能吸引多貓搶食，請立即洗手</li>
+            <li>🚫 <strong>禁止食物</strong>：巧克力、洋蔥、葡萄、咖啡因——絕對不可讓貓接近</li>
+          </ul>
+          <div class="callout danger"><strong>🔴 毒素警告</strong>蔥、蒜、韭菜（硫化物）可導致溶血性貧血；巧克力的可可鹼對貓有致命風險。桌上食物請務必看管好。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('D1')">🍽️ D1 桌面防護</button>
+            <button class="explore-btn" onclick="goToSlide('D3')">🐾 D3 特殊品種</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 抓傷急救</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- C5 -->
+      <div class="slide" data-id="C5">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(224,109,83,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">C5 · 互動方式群組</div>
+            <div class="slide-title">攝影禮節</div>
+            <div class="slide-subtitle">拍好照又不打擾貓的完整指南</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clC)">C</span>
+          <img class="slide-img" src="../assets/image7.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>🚫 <strong>禁止閃光燈</strong>：貓的瞳孔對強光極度敏感，可能造成短暫視力損傷</li>
+            <li>📱 <strong>手機靜音</strong>：關閉相機快門聲，音效對貓是高頻噪音壓力源</li>
+            <li>📐 <strong>低角度拍攝</strong>：蹲下或趴下到貓的視線高度，畫面也更好看</li>
+            <li>⏰ <strong>不追逐拍攝</strong>：貓若走開就讓牠走，不要跟拍或呼喚回來</li>
+            <li>🌙 <strong>利用自然光</strong>：窗邊光線是最友善的拍貓光源</li>
+            <li>📋 商業攝影或直播需事先向店家申請許可</li>
+          </ul>
+          <div class="callout note"><strong>📖 構圖小技巧</strong>等待貓自然放鬆後再拍，睡姿、梳毛、凝視窗外的瞬間往往最上相，也最不會打擾貓。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('B1')">🚨 B1 警戒預警</button>
+            <button class="explore-btn" onclick="goToSlide('D1')">🍽️ D1 桌面防護</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 緊急處置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- D1 -->
+      <div class="slide" data-id="D1">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(226,149,56,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">D1 · 情境應對群組</div>
+            <div class="slide-title">桌面防護與飲食共存</div>
+            <div class="slide-subtitle">貓咖用餐的防護策略</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clD)">D</span>
+          <img class="slide-img" src="../assets/image5.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>☕ <strong>熱飲加蓋</strong>：貓可能好奇舔食，熱咖啡/茶請加蓋或移至貓無法到達處</li>
+            <li>🥐 <strong>食物看管</strong>：離座時將食物放入防貓袋或交工作人員保管</li>
+            <li>🧅 <strong>高危食材識別</strong>：蔥蒜類、葡萄乾、夏威夷豆、木糖醇（甜點）</li>
+            <li>🪑 <strong>桌面配置</strong>：包包、外套不放桌面（貓可能踩踏帶走食物）</li>
+            <li>📸 拍照時顧好桌面：貓咪趁你拍照偷吃是經典意外</li>
+          </ul>
+          <div class="callout warn"><strong>⚠️ 緊急情況</strong>若目擊貓吃到疑似有毒食物，立即通知工作人員說明：食物種類 + 目測進食量。店家有緊急獸醫聯絡方式。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('D3')">🐾 D3 特殊品種</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 抓傷急救</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- D2 -->
+      <div class="slide" data-id="D2">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(226,149,56,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">D2 · 情境應對群組</div>
+            <div class="slide-title">兒童同行攻略</div>
+            <div class="slide-subtitle">帶孩子安全享受貓咖</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clD)">D</span>
+          <img class="slide-img" src="../assets/image0.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>🔞 <strong>年齡限制</strong>：多數貓咖要求 3 歲以上，部分要求 6 歲以上，請事先確認</li>
+            <li>👨‍👩‍👧 <strong>大人全程陪同</strong>：12 歲以下兒童不可單獨接觸貓，大人隨時在側</li>
+            <li>📢 <strong>音量管制</strong>：叫喊聲、跑步聲對貓是極大壓力，入場前與孩子溝通</li>
+            <li>🤲 <strong>輕柔示範</strong>：大人先示範正確撫摸方式，孩子跟著學</li>
+            <li>🐱 <strong>等貓來找</strong>：教孩子「坐好等貓來，不追貓」的基本原則</li>
+            <li>📋 若孩子對貓毛過敏，請準備抗過敏藥物並告知工作人員</li>
+          </ul>
+          <div class="callout tip"><strong>💡 親子破冰遊戲</strong>讓孩子手持貓薄荷玩具靜靜等待，貓咪主動靠近的那一刻，是最好的自然教育時機。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('B1')">🚨 B1 警戒預警</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 抓傷急救</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- D3 -->
+      <div class="slide" data-id="D3">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(226,149,56,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">D3 · 情境應對群組</div>
+            <div class="slide-title">特殊品種互動指南</div>
+            <div class="slide-subtitle">緬因貓、折耳貓、斯芬克斯等個性速查</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clD)">D</span>
+          <img class="slide-img" src="../assets/image0.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>🦁 <strong>緬因貓</strong>：活潑好玩、主動互動；體型大，不要限制行動，玩具需求高</li>
+            <li>🐾 <strong>布偶貓</strong>：溫馴安靜，較能接受抱抱，但仍尊重個體差異</li>
+            <li>👂 <strong>蘇格蘭折耳</strong>：軟骨基因病痛可能使關節敏感，避免觸碰四肢</li>
+            <li>🌡️ <strong>斯芬克斯（無毛貓）</strong>：怕冷、皮膚直接接觸外物，請勿粗魯觸碰皮膚</li>
+            <li>😤 <strong>波斯貓</strong>：安靜、低互動需求，不要強迫社交，讓牠自在就好</li>
+            <li>📋 店內會標示品種特性，入場前查閱店家說明牌</li>
+          </ul>
+          <div class="callout note"><strong>📌 紅玥緬因貓咪咖啡</strong>以緬因貓為主題，店內設有品種介紹卡，每隻貓都有專屬名牌與個性描述。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('B2')">😸 B2 呼嚕含意</button>
+            <button class="explore-btn" onclick="goToSlide('D4')">🩹 D4 抓傷急救</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- D4 -->
+      <div class="slide" data-id="D4">
+        <div class="slide-header" style="background: linear-gradient(135deg, rgba(226,149,56,.2), transparent)">
+          <div class="slide-title-block">
+            <div class="slide-node-id">D4 · 情境應對群組</div>
+            <div class="slide-title">抓傷咬傷急救 SOP</div>
+            <div class="slide-subtitle">沉著處理，5 分鐘完成基本處置</div>
+          </div>
+          <span class="slide-cluster-badge" style="background:var(--clD)">D</span>
+          <img class="slide-img" src="../assets/image7.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="slide-body">
+          <ul>
+            <li>① <strong>不要縮手</strong>：瞬間縮回反而加深傷口；緩慢收回比快速抽離更安全</li>
+            <li>② <strong>流水沖洗 5 分鐘</strong>：用乾淨流水（非酒精）沖洗傷口，去除唾液與細菌</li>
+            <li>③ <strong>告知工作人員</strong>：登記事件，店家提供急救箱（碘伏、紗布）</li>
+            <li>④ <strong>24 小時觀察</strong>：貓抓病（Bartonella henselae）潛伏期 3-14 天，紅腫發熱請就醫</li>
+            <li>⑤ <strong>就醫標準</strong>：深刺穿傷、咬傷、傷口邊緣不整齊 → 建議當日就醫</li>
+          </ul>
+          <div class="callout warn"><strong>⚠️ 貓抓病</strong>Bartonella henselae 菌可導致淋巴結腫大、發燒。免疫力較弱者（老人、兒童、孕婦）被抓後請主動就醫告知醫師有貓抓史。</div>
+        </div>
+        <div class="slide-explore">
+          <div class="explore-label">🔗 延伸探索</div>
+          <div class="explore-links">
+            <button class="explore-btn" onclick="goToSlide('HUB-00')">🏠 回到核心</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /slides-container -->
+
+    <!-- Navigation -->
+    <div id="slide-nav">
+      <button class="nav-btn" id="btn-prev" onclick="changeSlide(-1)" title="← 上一頁">‹</button>
+      <button id="nav-overview-btn" onclick="toggleOverview()">📋 總覽 (O)</button>
+      <button class="nav-btn" id="btn-next" onclick="changeSlide(1)" title="→ 下一頁">›</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ OVERVIEW MODAL ═══════ -->
+<div id="overview-modal">
+  <button class="close-overview" onclick="toggleOverview()">✕</button>
+  <h2>📋 所有節點總覽 — 點擊跳轉</h2>
+  <div class="overview-grid" id="overview-grid"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   DATA — NODES & EDGES
+════════════════════════════════════════════ */
+const NODES = [
+  { id: 'HUB-00', label: '尊重貓咪自主權',   cluster: 'hub', emoji: '🌟' },
+  { id: 'A1',     label: '法律合規',          cluster: 'A',   emoji: '⚖️' },
+  { id: 'A2',     label: '環境五大支柱',      cluster: 'A',   emoji: '🏠' },
+  { id: 'A3',     label: '入店衛生',          cluster: 'A',   emoji: '🧴' },
+  { id: 'B1',     label: '警戒預警三級',      cluster: 'B',   emoji: '🚨' },
+  { id: 'B2',     label: '呼嚕雙重含意',      cluster: 'B',   emoji: '😸' },
+  { id: 'B3',     label: '氣味與費洛蒙',      cluster: 'B',   emoji: '🌸' },
+  { id: 'C1',     label: '破冰四步驟',        cluster: 'C',   emoji: '🤝' },
+  { id: 'C2',     label: '撫摸地圖',          cluster: 'C',   emoji: '🗺️' },
+  { id: 'C3',     label: '逗貓玩耍',          cluster: 'C',   emoji: '🎭' },
+  { id: 'C4',     label: '肉泥餵食',          cluster: 'C',   emoji: '🍡' },
+  { id: 'C5',     label: '攝影禮節',          cluster: 'C',   emoji: '📷' },
+  { id: 'D1',     label: '桌面防護',          cluster: 'D',   emoji: '🍽️' },
+  { id: 'D2',     label: '兒童同行',          cluster: 'D',   emoji: '👨‍👩‍👧' },
+  { id: 'D3',     label: '特殊品種',          cluster: 'D',   emoji: '🐾' },
+  { id: 'D4',     label: '抓傷急救',          cluster: 'D',   emoji: '🩹' },
+];
+
+const EDGES = [
+  ['HUB-00','A1'],['HUB-00','A2'],['HUB-00','B1'],['HUB-00','C1'],
+  ['A1','A2'],['A1','C1'],['A1','D4'],
+  ['A2','A3'],['A2','B3'],['A2','C3'],
+  ['A3','B3'],['A3','D1'],['A3','D2'],
+  ['B1','B2'],['B1','C2'],['B1','D4'],
+  ['B2','C2'],['B2','D3'],
+  ['B3','C1'],['B3','D1'],
+  ['C1','C2'],['C1','C3'],['C1','B1'],['C1','C5'],
+  ['C2','B2'],['C2','D3'],
+  ['C3','C4'],['C3','D3'],
+  ['C4','D1'],['C4','D3'],['C4','D4'],
+  ['C5','B1'],['C5','D1'],
+  ['D1','D3'],['D1','D4'],
+  ['D2','B1'],['D2','D4'],
+  ['D3','B2'],['D3','D4'],
+  ['D4','HUB-00'],
+];
+
+// Safety shortcuts are visibly distinct from regular knowledge links.
+// Any hands-on activity can jump straight to first-aid guidance.
+const EMERGENCY_EDGES = [
+  ['B1','D4'], ['C1','D4'], ['C2','D4'], ['C3','D4'],
+  ['C4','D4'], ['C5','D4'], ['D1','D4'], ['D2','D4']
+];
+
+const CLUSTER_COLORS = {
+  hub: '#C88A58', A: '#3A8A7B', B: '#9B59B6', C: '#E06D53', D: '#E29538'
+};
+
+/* ═══════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let currentSlideIndex = 0;
+let graphMode = false;
+const slides = Array.from(document.querySelectorAll('.slide'));
+const nodeIds = slides.map(s => s.dataset.id);
+
+/* ═══════════════════════════════════════════
+   SLIDE NAVIGATION
+════════════════════════════════════════════ */
+function updateSlideUI() {
+  slides.forEach((s, i) => s.classList.toggle('active', i === currentSlideIndex));
+  const total = slides.length;
+  document.getElementById('slide-counter').textContent = `${currentSlideIndex + 1} / ${total}`;
+  document.getElementById('progress-bar').style.width = `${((currentSlideIndex + 1) / total) * 100}%`;
+  document.getElementById('btn-prev').disabled = currentSlideIndex === 0;
+  document.getElementById('btn-next').disabled = currentSlideIndex === total - 1;
+}
+
+function changeSlide(dir) {
+  const next = currentSlideIndex + dir;
+  if (next >= 0 && next < slides.length) {
+    currentSlideIndex = next;
+    updateSlideUI();
+  }
+}
+
+function goToSlide(nodeId) {
+  const idx = nodeIds.indexOf(nodeId);
+  if (idx !== -1) {
+    currentSlideIndex = idx;
+    updateSlideUI();
+    if (graphMode) toggleGraphView(); // switch to slide view
+    closeOverview();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   VIEW TOGGLE
+════════════════════════════════════════════ */
+function toggleGraphView() {
+  graphMode = !graphMode;
+  const gv = document.getElementById('graph-view');
+  const sv = document.getElementById('slide-view');
+  const btn = document.getElementById('btn-graph');
+  btn.setAttribute('aria-pressed', String(graphMode));
+  if (graphMode) {
+    gv.classList.remove('view-hidden');
+    sv.classList.add('view-hidden');
+    btn.textContent = '📄 投影片';
+    btn.classList.add('active');
+    document.getElementById('progress-bar').style.opacity = '0';
+    initGraph();
+  } else {
+    stopGraph();
+    gv.classList.add('view-hidden');
+    sv.classList.remove('view-hidden');
+    btn.textContent = '🌐 Graph 圖譜';
+    btn.classList.remove('active');
+    document.getElementById('progress-bar').style.opacity = '1';
+  }
+}
+
+// Initialize: show slide view, hide graph view
+document.getElementById('graph-view').classList.add('view-hidden');
+
+/* ═══════════════════════════════════════════
+   OVERVIEW MODAL
+════════════════════════════════════════════ */
+function buildOverview() {
+  const grid = document.getElementById('overview-grid');
+  grid.innerHTML = '';
+  NODES.forEach(n => {
+    const card = document.createElement('div');
+    card.className = 'overview-card';
+    card.style.borderColor = CLUSTER_COLORS[n.cluster] + '55';
+    card.innerHTML = `<div class="ov-id">${n.id}</div><div class="ov-title">${n.emoji} ${n.label}</div>`;
+    card.onclick = () => goToSlide(n.id);
+    grid.appendChild(card);
+  });
+}
+function toggleOverview() {
+  const m = document.getElementById('overview-modal');
+  m.classList.toggle('open');
+  if (m.classList.contains('open')) buildOverview();
+}
+function closeOverview() {
+  document.getElementById('overview-modal').classList.remove('open');
+}
+
+/* ═══════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (document.getElementById('overview-modal').classList.contains('open')) {
+    if (e.key.toLowerCase() === 'g') {
+      closeOverview();
+      toggleGraphView();
+      return;
+    }
+    if (e.key === 'Escape' || e.key.toLowerCase() === 'o') closeOverview();
+    return;
+  }
+  switch (e.key) {
+    case 'g': case 'G': toggleGraphView(); break;
+    case 'ArrowLeft':  case 'ArrowUp':    if (!graphMode) changeSlide(-1); break;
+    case 'ArrowRight': case 'ArrowDown':  if (!graphMode) changeSlide(1);  break;
+    case ' ':  if (!graphMode) { e.preventDefault(); changeSlide(1); } break;
+    case 'o': case 'O': toggleOverview(); break;
+    case 'f': case 'F': toggleFullscreen(); break;
+    case 'Escape': if (graphMode) toggleGraphView(); break;
+  }
+});
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
+}
+
+/* ═══════════════════════════════════════════
+   GRAPH ENGINE — FORCE DIRECTED
+════════════════════════════════════════════ */
+let graphNodes = [];
+let animFrame = null;
+let isDragging = false;
+let dragNode = null;
+let dragOffX = 0, dragOffY = 0;
+let hoveredNode = null;
+let canvasScale = 1;
+let panX = 0, panY = 0;
+let isPanning = false;
+let panStartX = 0, panStartY = 0;
+let panStartPanX = 0, panStartPanY = 0;
+let graphInitialized = false;
+let graphEventsBound = false;
+let graphWidth = 0, graphHeight = 0, canvasPixelRatio = 1;
+
+function resizeGraphCanvas() {
+  const canvas = document.getElementById('graph-canvas');
+  const width = Math.max(1, canvas.clientWidth);
+  const height = Math.max(1, canvas.clientHeight);
+  const deltaX = (width - graphWidth) / 2;
+  const deltaY = (height - graphHeight) / 2;
+  if (graphInitialized && (deltaX || deltaY)) {
+    graphNodes.forEach(n => { n.x += deltaX; n.y += deltaY; });
+    panX += deltaX * (1 - canvasScale);
+    panY += deltaY * (1 - canvasScale);
+  }
+  graphWidth = width;
+  graphHeight = height;
+  canvasPixelRatio = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(width * canvasPixelRatio);
+  canvas.height = Math.round(height * canvasPixelRatio);
+}
+
+function stopGraph() {
+  if (animFrame !== null) cancelAnimationFrame(animFrame);
+  animFrame = null;
+  hoveredNode = null;
+  document.getElementById('graph-tooltip').style.display = 'none';
+}
+
+function initGraph() {
+  stopGraph();
+  const canvas = document.getElementById('graph-canvas');
+  resizeGraphCanvas();
+  const W = graphWidth;
+  const H = graphHeight;
+  const cx = W / 2, cy = H / 2;
+
+  if (!graphInitialized) {
+    const clusterCenters = {
+      hub: { x: 0, y: 0 },
+      A: { x: -220, y: -160 }, B: { x: -220, y: 160 },
+      C: { x: 220, y: -140 }, D: { x: 220, y: 170 },
+    };
+    graphNodes = NODES.map((n, i) => {
+      const cc = clusterCenters[n.cluster];
+      const angle = i * 2.39996;
+      const radius = n.cluster === 'hub' ? 0 : 65 + (i % 3) * 8;
+      return {
+        ...n,
+        x: cx + cc.x + Math.cos(angle) * radius,
+        y: cy + cc.y + Math.sin(angle) * radius,
+        vx: 0, vy: 0,
+        r: n.cluster === 'hub' ? 37 : 29,
+      };
+    });
+    graphInitialized = true;
+    resetGraphView(false);
+  }
+  bindGraphEvents(canvas);
+  runPhysics(canvas);
+}
+
+function zoomGraph(factor, x = graphWidth / 2, y = graphHeight / 2) {
+  const oldScale = canvasScale;
+  canvasScale = Math.max(.35, Math.min(2.7, canvasScale * factor));
+  const ratio = canvasScale / oldScale;
+  panX = x - (x - panX) * ratio;
+  panY = y - (y - panY) * ratio;
+}
+
+function resetGraphView(restartLayout = true) {
+  if (restartLayout && graphInitialized) {
+    graphNodes.forEach(n => { n.vx = 0; n.vy = 0; });
+  }
+  canvasScale = Math.min(1, Math.max(.45, Math.min(graphWidth / 850, graphHeight / 650)));
+  panX = graphWidth * (1 - canvasScale) / 2;
+  panY = graphHeight * (1 - canvasScale) / 2;
+}
+
+function runPhysics(canvas) {
+  const ctx = canvas.getContext('2d');
+
+  const edgeSet = new Set(EDGES.map(([a,b]) => `${a}>${b}`));
+
+  function step() {
+    if (!graphMode) { animFrame = null; return; }
+    const W = graphWidth, H = graphHeight;
+    // Spring + repulsion forces
+    graphNodes.forEach(n => { n.fx = 0; n.fy = 0; });
+
+    // Repulsion
+    for (let i = 0; i < graphNodes.length; i++) {
+      for (let j = i + 1; j < graphNodes.length; j++) {
+        const a = graphNodes[i], b = graphNodes[j];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+        const force = 8000 / (dist * dist);
+        const fx = (dx / dist) * force, fy = (dy / dist) * force;
+        a.fx -= fx; a.fy -= fy;
+        b.fx += fx; b.fy += fy;
+      }
+    }
+
+    // Attraction along edges
+    EDGES.forEach(([aId, bId]) => {
+      const a = graphNodes.find(n => n.id === aId);
+      const b = graphNodes.find(n => n.id === bId);
+      if (!a || !b) return;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const force = (dist - 140) * 0.03;
+      const fx = (dx / dist) * force, fy = (dy / dist) * force;
+      a.fx += fx; a.fy += fy;
+      b.fx -= fx; b.fy -= fy;
+    });
+
+    // Center gravity
+    const cx = W/2, cy = H/2;
+    graphNodes.forEach(n => {
+      n.fx += (cx - n.x) * 0.004;
+      n.fy += (cy - n.y) * 0.004;
+    });
+
+    // Integrate
+    graphNodes.forEach(n => {
+      if (isDragging && n === dragNode) return;
+      n.vx = (n.vx + n.fx) * 0.82;
+      n.vy = (n.vy + n.fy) * 0.82;
+      n.x += n.vx;
+      n.y += n.vy;
+    });
+
+    draw(ctx, W, H, edgeSet);
+    animFrame = requestAnimationFrame(step);
+  }
+  step();
+}
+
+function draw(ctx, W, H, edgeSet) {
+  ctx.setTransform(canvasPixelRatio, 0, 0, canvasPixelRatio, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  // Deterministic star field. It is drawn in screen coordinates, so panning
+  // moves the knowledge map without moving the backdrop.
+  for (let i = 0; i < 125; i++) {
+    const x = ((i * 317.17 + 71) % 997) / 997 * W;
+    const y = ((i * 181.53 + 37) % 991) / 991 * H;
+    const brightness = .13 + (i % 5) * .065;
+    ctx.fillStyle = `rgba(225,230,255,${brightness})`;
+    ctx.fillRect(x, y, i % 9 === 0 ? 2 : 1, i % 9 === 0 ? 2 : 1);
+  }
+
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(canvasScale, canvasScale);
+
+  const cx = W / 2, cy = H / 2;
+  [170, 340].forEach((r, i) => {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, r * 1.15, r * .82, -.15, 0, Math.PI * 2);
+    ctx.strokeStyle = i === 0 ? 'rgba(219,204,255,.10)' : 'rgba(219,204,255,.055)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 12]);
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+
+  // Draw edges
+  EDGES.forEach(([aId, bId]) => {
+    const a = graphNodes.find(n => n.id === aId);
+    const b = graphNodes.find(n => n.id === bId);
+    if (!a || !b) return;
+    const isHighlighted = hoveredNode && (hoveredNode.id === aId || hoveredNode.id === bId);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    const isSafetyLink = EMERGENCY_EDGES.some(([from, to]) => from === aId && to === bId);
+    if (isSafetyLink) return; // rendered separately as a warning-red shortcut
+    ctx.strokeStyle = isHighlighted ? 'rgba(234,232,255,0.85)' : 'rgba(200,200,255,0.21)';
+    ctx.lineWidth = isHighlighted ? 2 : 1;
+    ctx.stroke();
+
+    // Arrow head
+    if (isHighlighted) {
+      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      const ar = b.r + 4;
+      const tx = b.x - Math.cos(angle) * ar;
+      const ty = b.y - Math.sin(angle) * ar;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - 10*Math.cos(angle-0.4), ty - 10*Math.sin(angle-0.4));
+      ctx.lineTo(tx - 10*Math.cos(angle+0.4), ty - 10*Math.sin(angle+0.4));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(200,200,255,0.7)';
+      ctx.fill();
+    }
+  });
+
+  // Safety links are direct, high-priority routes to first aid (D4).
+  ctx.setLineDash([6, 7]);
+  EMERGENCY_EDGES.forEach(([aId, bId]) => {
+    const a = graphNodes.find(n => n.id === aId);
+    const b = graphNodes.find(n => n.id === bId);
+    if (!a || !b) return;
+    const active = hoveredNode && (hoveredNode.id === aId || hoveredNode.id === bId);
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    const startX = a.x + dx / distance * a.r;
+    const startY = a.y + dy / distance * a.r;
+    const endX = b.x - dx / distance * b.r;
+    const endY = b.y - dy / distance * b.r;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.lineWidth = active ? 2.5 : 1.25;
+    ctx.strokeStyle = active ? 'rgba(255,130,130,.95)' : 'rgba(245,109,112,.36)';
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+
+  // Draw nodes
+  graphNodes.forEach(n => {
+    const color = CLUSTER_COLORS[n.cluster];
+    const isHovered = n === hoveredNode;
+    const isCurrent = n.id === nodeIds[currentSlideIndex];
+
+    // Glow
+    if (isHovered || isCurrent) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r + 10, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(n.x, n.y, n.r, n.x, n.y, n.r + 10);
+      grad.addColorStop(0, color + '55');
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    // Soft colored halo and glossy node body
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    const fill = ctx.createRadialGradient(n.x - n.r * .35, n.y - n.r * .4, 3, n.x, n.y, n.r);
+    fill.addColorStop(0, isHovered ? '#fff1dd' : color);
+    fill.addColorStop(1, color + 'b9');
+    ctx.fillStyle = fill;
+    ctx.shadowColor = color + '88';
+    ctx.shadowBlur = isHovered || isCurrent ? 25 : 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    if (isCurrent) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+
+    // Emoji
+    ctx.font = `${n.r * 0.65}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.emoji, n.x, n.y - 2);
+
+    // ID label
+    ctx.font = `bold ${n.r * 0.40}px 'Segoe UI', sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText(n.id, n.x, n.y + n.r * 0.55);
+
+    // Name label below
+    ctx.font = `${n.r * 0.44}px 'PingFang TC', 'Microsoft JhengHei', sans-serif`;
+    ctx.fillStyle = isHovered ? '#fff' : 'rgba(255,255,255,0.65)';
+    ctx.fillText(n.label.length > 6 ? n.label.slice(0,6)+'…' : n.label, n.x, n.y + n.r + 14);
+  });
+
+  ctx.restore();
+}
+
+/* ─── Canvas Events ─── */
+function getCanvasPos(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left - panX) / canvasScale,
+    y: (clientY - rect.top  - panY) / canvasScale,
+  };
+}
+
+function findNodeAt(pos) {
+  return graphNodes.find(n => {
+    const dx = n.x - pos.x, dy = n.y - pos.y;
+    return Math.sqrt(dx*dx + dy*dy) < n.r + 4;
+  }) || null;
+}
+
+function bindGraphEvents(canvas) {
+  // Listeners belong to the SAME canvas as the renderer. Replacing the canvas
+  // here made the graph look blank in the original implementation.
+  if (graphEventsBound) return;
+  graphEventsBound = true;
+  const c = canvas;
+  const tooltip = document.getElementById('graph-tooltip');
+  const graphView = document.getElementById('graph-view');
+  let pointer = null;
+
+  function screenPoint(e) {
+    const rect = c.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function setHover(e) {
+    const point = screenPoint(e);
+    hoveredNode = findNodeAt(getCanvasPos(c, e));
+    c.style.cursor = pointer ? 'grabbing' : hoveredNode ? 'pointer' : 'grab';
+    if (!hoveredNode || pointer) {
+      tooltip.style.display = 'none';
+      return;
+    }
+    document.getElementById('tt-id').textContent = hoveredNode.id;
+    document.getElementById('tt-label').textContent = hoveredNode.emoji + ' ' + hoveredNode.label;
+    tooltip.style.display = 'block';
+    // Tooltip coordinates are relative to graph-view, NOT the page viewport.
+    const left = Math.min(point.x + 16, graphView.clientWidth - 205);
+    const top = Math.min(point.y + 14, graphView.clientHeight - 85);
+    tooltip.style.left = Math.max(8, left) + 'px';
+    tooltip.style.top = Math.max(8, top) + 'px';
+  }
+
+  c.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const world = getCanvasPos(c, e);
+    const point = screenPoint(e);
+    const node = findNodeAt(world);
+    pointer = {
+      id: e.pointerId,
+      mode: node ? 'node' : 'pan',
+      node,
+      startX: point.x,
+      startY: point.y,
+      originX: node ? node.x : 0,
+      originY: node ? node.y : 0,
+      originPanX: panX,
+      originPanY: panY,
+      moved: false,
+    };
+    c.setPointerCapture(e.pointerId);
+    dragNode = node;
+    isDragging = Boolean(node);
+    isPanning = !node;
+    tooltip.style.display = 'none';
+    c.style.cursor = 'grabbing';
+  });
+
+  c.addEventListener('pointermove', e => {
+    if (!pointer || pointer.id !== e.pointerId) { setHover(e); return; }
+    const point = screenPoint(e);
+    const dx = point.x - pointer.startX;
+    const dy = point.y - pointer.startY;
+    if (Math.hypot(dx, dy) > 6) pointer.moved = true;
+    if (!pointer.moved) return;
+    if (pointer.mode === 'node') {
+      pointer.node.x = pointer.originX + dx / canvasScale;
+      pointer.node.y = pointer.originY + dy / canvasScale;
+      pointer.node.vx = 0;
+      pointer.node.vy = 0;
+    } else {
+      panX = pointer.originPanX + dx;
+      panY = pointer.originPanY + dy;
+    }
+  });
+
+  function releasePointer(e) {
+    if (!pointer || pointer.id !== e.pointerId) return;
+    const targetNode = pointer.mode === 'node' && !pointer.moved ? pointer.node : null;
+    pointer = null;
+    isDragging = false;
+    isPanning = false;
+    dragNode = null;
+    if (c.hasPointerCapture(e.pointerId)) c.releasePointerCapture(e.pointerId);
+    if (targetNode && e.type === 'pointerup') goToSlide(targetNode.id);
+    else if (graphMode) setHover(e);
+  }
+  c.addEventListener('pointerup', releasePointer);
+  c.addEventListener('pointercancel', releasePointer);
+  c.addEventListener('pointerleave', () => {
+    if (!pointer) { hoveredNode = null; tooltip.style.display = 'none'; }
+  });
+
+  c.addEventListener('wheel', e => {
+    e.preventDefault();
+    const point = screenPoint(e);
+    zoomGraph(e.deltaY < 0 ? 1.12 : 1 / 1.12, point.x, point.y);
+  }, { passive: false });
+
+  window.addEventListener('resize', () => {
+    if (graphMode) resizeGraphCanvas();
+  });
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+// The original HTML references optional ../assets images. If those assets are
+// not present, show built-in decorative illustrations instead of empty space.
+document.querySelectorAll('.slide-img').forEach(img => {
+  const showFallback = () => {
+    if (!img.isConnected) return;
+    const slide = img.closest('.slide');
+    const node = NODES.find(item => item.id === slide?.dataset.id);
+    const icon = document.createElement('span');
+    icon.className = 'slide-illustration';
+    icon.setAttribute('role', 'img');
+    icon.setAttribute('aria-label', '教學節點示意圖');
+    icon.textContent = node?.emoji || '🐱';
+    img.replaceWith(icon);
+  };
+  img.onerror = showFallback;
+  if (img.complete && img.naturalWidth === 0) showFallback();
+});
+updateSlideUI();
+</script>
+</body>
+</html>
