@@ -1,0 +1,227 @@
+{
+  "main": {
+    "id": "53647da80a601798",
+    "type": "split",
+    "children": [
+      {
+        "id": "fe4e009545d5c270",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4ba1d32608b07f15",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "wiki/scenarios/senior-cats-in-cafe.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "senior-cats-in-cafe"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "def3828164149ca1",
+    "type": "split",
+    "children": [
+      {
+        "id": "2dda892481131fcb",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "022a656c7fe5badd",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "檔案瀏覽器"
+            }
+          },
+          {
+            "id": "76cbeda7450ea54a",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "搜尋"
+            }
+          },
+          {
+            "id": "6b08b32e392e1e59",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "書籤"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "38752d40dacda03c",
+    "type": "split",
+    "children": [
+      {
+        "id": "40325186568b97c2",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ade532a11b4ca84f",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "wiki/scenarios/senior-cats-in-cafe.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "反向連結"
+            }
+          },
+          {
+            "id": "7fc64fc9a42fed6c",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "wiki/scenarios/senior-cats-in-cafe.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "對外連結"
+            }
+          },
+          {
+            "id": "60082ab51e823fcc",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "標籤"
+            }
+          },
+          {
+            "id": "b06060f1e2a7498d",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "所有屬性"
+            }
+          },
+          {
+            "id": "e2d1290aeb6f1893",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "wiki/scenarios/senior-cats-in-cafe.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "大綱"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:開啟快速切換": false,
+      "graph:查看關聯圖": false,
+      "canvas:建立新畫布": false,
+      "daily-notes:開啟今天的每日筆記": false,
+      "templates:插入模板": false,
+      "command-palette:開啟命令面板": false,
+      "bases:建立新的 base": false
+    }
+  },
+  "active": "4ba1d32608b07f15",
+  "lastOpenFiles": [
+    "slides/index.html",
+    "slides",
+    "wiki/etiquette/hygiene-and-shoe-protocol.md",
+    "wiki/scenarios/dining-with-cats-table-manners.md",
+    "wiki/interactions/treat-and-churu-feeding.md",
+    "raw/web-clippings/red-moon-maine-coon-cafe.md",
+    "inline_info.txt",
+    "inline.html",
+    "wiki/interactions/photography-etiquette.md",
+    "wiki/scenarios/visiting-with-kids.md",
+    "wiki/personalities/popular-cat-breeds-guide.md",
+    "raw/web-clippings/cat-mocha-taipei-xinyi.md",
+    "mocha_clean.txt",
+    "mocha.html",
+    "wiki/scenarios/scratch-and-bite-first-aid.md",
+    "wiki/etiquette/legal-exhibition-compliance.md",
+    "raw/regulations/animal-exhibition-regulations-2024.md",
+    "raw/regulations/self-evaluation.txt",
+    "raw/regulations/permit-application-sample.txt",
+    "raw/regulations/operation-plan-sample.txt",
+    "raw/regulations/inspection-checklist.txt",
+    "raw/regulations/evaluation-form.txt",
+    "wiki/scenarios/cat-stress-olfactory.md",
+    "wiki/etiquette/feline-five-pillars.md",
+    "raw/vet-guidelines/felinevma-icatcare-environmental-needs.md",
+    "wiki/scenarios/senior-cats-in-cafe.md",
+    "wiki/scenarios/multi-cat-conflicts.md",
+    "wiki/interactions/play-rules.md",
+    "wiki/interactions/dangerous-substances.md",
+    "wiki/interactions/consent-first-approach.md",
+    "wiki/body-language/warning-signals.md",
+    "wiki/body-language/purring-dual-meaning.md",
+    "agent.md"
+  ]
+}
