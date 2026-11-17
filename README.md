@@ -1,4 +1,3 @@
-[README.md]
 # 🐾 貓咖新手教學與互動指南知識庫 (Cat Cafe Beginner & Interaction Wiki)
 
 > 依據 **Andrej Karpathy LLM Wiki** 模式構建，融合 **國際貓科獸醫組織 (AAFP / ISFM) 友善環境指引**、台灣 **《動物展演管理辦法》（113年最新修正）**、農業部官方指引以及知名貓咖（MOCHA、紅玥緬因貓）實務經驗打造的現代化貓咪互動知識庫。
